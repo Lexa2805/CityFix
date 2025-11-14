@@ -290,3 +290,53 @@ Ensure:
 ## ⚖️ License
 
 MIT License — free for civic innovation and academic use.
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+git clone https://github.com/<your-username>/cityfix.git
+cd cityfix
+
+---
+
+## 🧩 Backend (FastAPI)
+
+cd backend
+python -m venv .venv
+.\.venv\Scripts\activate   # Windows
+# or
+source .venv/bin/activate # macOS/Linux
+
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload
+
+Backend runs at http://127.0.0.1:8000
+
+---
+
+## 🌐 Web App (Next.js)
+
+cd web
+npm install
+
+# create .env.local (see .env.example if included)
+npm run dev
+
+Web app runs at http://localhost:3000
+
+---
+
+## 📱 Flutter App
+
+cd app
+flutter pub get
+flutter run
+
+---
+
+## 🗄️ Supabase (optional local mode)
+
+npm install -g supabase
+supabase start
