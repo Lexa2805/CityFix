@@ -27,6 +27,7 @@ export default function CitizenDashboard() {
                             </svg>
                         }
                         color="purple"
+                        href="/citizen/new-request"
                     />
                     <ActionCard
                         title="Cererile Mele"
@@ -37,6 +38,7 @@ export default function CitizenDashboard() {
                             </svg>
                         }
                         color="blue"
+                        href="/citizen/requests"
                     />
                     <ActionCard
                         title="Asistent AI"
@@ -47,6 +49,7 @@ export default function CitizenDashboard() {
                             </svg>
                         }
                         color="green"
+                        href="/citizen/ai-chat"
                     />
                 </div>
 
@@ -66,11 +69,12 @@ export default function CitizenDashboard() {
     )
 }
 
-function ActionCard({ title, description, icon, color }: {
+function ActionCard({ title, description, icon, color, href }: {
     title: string
     description: string
     icon: React.ReactNode
     color: 'purple' | 'blue' | 'green'
+    href?: string
 }) {
     const colors = {
         purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
@@ -78,13 +82,30 @@ function ActionCard({ title, description, icon, color }: {
         green: 'bg-green-50 text-green-600 hover:bg-green-100',
     }
 
-    return (
-        <button className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left">
+    const content = (
+        <>
             <div className={`w-16 h-16 rounded-lg ${colors[color]} flex items-center justify-center mb-4`}>
                 {icon}
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
             <p className="text-sm text-gray-600">{description}</p>
+        </>
+    )
+
+    if (href) {
+        return (
+            <a 
+                href={href}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left block"
+            >
+                {content}
+            </a>
+        )
+    }
+
+    return (
+        <button className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left block w-full">
+            {content}
         </button>
     )
 }
