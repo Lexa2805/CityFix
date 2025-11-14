@@ -1,0 +1,167 @@
+# ============================================================
+# GLOBAL IGNORE (Common OS Files)
+# ============================================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ============================================================
+# VS CODE
+# ============================================================
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ============================================================
+# PYTHON / FASTAPI BACKEND
+# ============================================================
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Pyright / pylance
+typings/
+
+# Build
+dist/
+build/
+
+# SQLite (if used)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+gunicorn.log
+uvicorn.log
+
+# ============================================================
+# NEXT.JS WEB FRONTEND
+# ============================================================
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+build/
+
+# Env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache
+.next/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+*.swp
+
+# ============================================================
+# SUPABASE
+# ============================================================
+
+supabase/.temp
+supabase/.branches
+.supabase/
+
+# Remove local Postgres data (huge, not needed in git)
+supabase/.branches
+supabase/docker/*.bak
+supabase/volumes/
+
+# ============================================================
+# FLUTTER APP
+# ============================================================
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Flutter/.last_build_id
+
+# Generated plugin registrant
+**/generated_plugin_registrant.dart
+
+# Build outputs
+android/.gradle/
+android/app/build/
+android/local.properties
+ios/Pods/
+ios/Runner/GeneratedPluginRegistrant.*
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Symbolication
+app.*.symbols
+
+# Crashlytics
+crashlytics-build.properties
+
+# ============================================================
+# LOGS AND TEMP FILES
+# ============================================================
+
+*.log
+*.tmp
+*.temp
+*.bak
+
+# ============================================================
+# GIT
+# ============================================================
+
+# Ignore Git conflict files
+*.orig
+*.rej
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+
+# ============================================================
+# END OF FILE
+# ============================================================
