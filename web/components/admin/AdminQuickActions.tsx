@@ -1,8 +1,6 @@
 'use client'
 import React, { useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { getUrgentRequests, autoAssignRequests, getAllRequests, getRequestsStatistics } from '@/lib/api/requestsApi'
 import { getRejectedDocuments } from '@/lib/api/documentsApi'
 
@@ -44,9 +42,11 @@ export default function AdminQuickActions({ onNavigate }: AdminQuickActionsProps
     setActiveAction('manual')
     toast.loading('Generez raportul pentru validare...', { id: 'manual-action' })
     try {
-      const [urgent, rejected] = await Promise.all([
+      const [urgent, rejected, { default: jsPDF }, { default: autoTable }] = await Promise.all([
         getUrgentRequests(10),
-        getRejectedDocuments(25)
+        getRejectedDocuments(25),
+        import('jspdf'),
+        import('jspdf-autotable')
       ])
 
       const doc = new jsPDF()

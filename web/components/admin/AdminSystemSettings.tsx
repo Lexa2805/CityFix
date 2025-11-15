@@ -1,6 +1,6 @@
 'use client'
-import React, { useState } from 'react'
-import { supabase } from '../../lib/supabaseClient'
+import React, { useState, useEffect } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function AdminSystemSettings() {
   const [settings, setSettings] = useState({
@@ -26,16 +26,45 @@ export default function AdminSystemSettings() {
   })
 
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings')
+      const result = await response.json()
+      if (response.ok && result.data) {
+        setSettings(result.data)
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      toast.error('Eroare la încărcarea setărilor')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSave = async () => {
     try {
       setSaving(true)
-      // In production, save to database
-      // For now, just simulate
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      alert('✅ Setările au fost salvate cu succes!')
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success('✅ Setările au fost salvate cu succes!')
+      } else {
+        toast.error(result.error || 'Eroare la salvarea setărilor')
+      }
     } catch (error) {
-      alert('Eroare la salvarea setărilor')
+      toast.error('Eroare la salvarea setărilor')
     } finally {
       setSaving(false)
     }
@@ -45,10 +74,16 @@ export default function AdminSystemSettings() {
     if (!confirm('Sigur vrei să faci backup acum? Acest proces poate dura câteva minute.')) return
 
     try {
-      alert('🔄 Backup în curs... (Funcționalitate în dezvoltare)')
-      // Implement actual backup logic
+      const response = await fetch('/api/admin/backup')
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success('✅ Backup finalizat cu succes!')
+      } else {
+        toast.error(result.error || 'Eroare la backup')
+      }
     } catch (error) {
-      alert('Eroare la backup')
+      toast.error('Eroare la backup')
     }
   }
 
@@ -56,15 +91,35 @@ export default function AdminSystemSettings() {
     if (!confirm('Vrei să sincronizezi baza de cunoștințe RAG cu ultima legislație?')) return
 
     try {
-      alert('🔄 Sincronizare în curs... (Funcționalitate în dezvoltare)')
-      // Implement actual sync logic with backend AI
+      const response = await fetch('/api/admin/knowledge/sync', {
+        method: 'POST'
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success('✅ Sincronizare finalizată!')
+      } else {
+        toast.error(result.error || 'Eroare la sincronizare')
+      }
     } catch (error) {
-      alert('Eroare la sincronizare')
+      toast.error('Eroare la sincronizare')
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+          <p className="text-gray-600">Se încarcă setările...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" />
       {/* Email Notifications */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Notificări Email</h3>

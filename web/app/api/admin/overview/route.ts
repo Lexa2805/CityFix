@@ -20,7 +20,7 @@ export async function GET() {
       supabase.from('profiles').select('role, is_active, created_at'),
       supabase
         .from('requests')
-        .select('status, created_at, updated_at, request_type')
+        .select('status, created_at, request_type')
         .gte('created_at', monthStartIso),
       supabase
         .from('documents')
@@ -64,13 +64,7 @@ export async function GET() {
 
     const requestsThisMonth = requests.length
     const processed = requests.filter(r => ['approved', 'rejected'].includes(r.status))
-    const avgProcessingTime = processed.length
-      ? processed.reduce((acc, req) => {
-          const created = new Date(req.created_at).getTime()
-          const updated = new Date(req.updated_at || req.created_at).getTime()
-          return acc + (updated - created)
-        }, 0) / processed.length / (1000 * 60 * 60 * 24)
-      : 0
+    const avgProcessingTime = 0 // Cannot calculate without updated_at column
 
     const activeRequests = requests.filter(r => ['pending_validation', 'in_review'].includes(r.status)).length
     const approvedCount = processed.filter(r => r.status === 'approved').length
