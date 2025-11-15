@@ -39,7 +39,7 @@ export interface UploadDocumentData {
 
 export async function uploadDocument(data: UploadDocumentData): Promise<Document> {
   const { requestId, file } = data
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('User not authenticated')
