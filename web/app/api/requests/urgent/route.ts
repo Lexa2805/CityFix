@@ -32,16 +32,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user profiles separately
-    const userIds = [...new Set(requests.map(r => r.user_id))]
+    const userIds = [...new Set(requests.map((r) => r.user_id))]
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, email, full_name')
       .in('id', userIds)
 
-    const profilesMap = new Map((profiles || []).map(p => [p.id, p]))
+    const profilesMap = new Map((profiles || []).map((p) => [p.id, p]))
 
     // Combine data
-    const enrichedData = requests.map(req => ({
+    const enrichedData = requests.map((req) => ({
       ...req,
       user: profilesMap.get(req.user_id) || { email: '', full_name: null }
     }))

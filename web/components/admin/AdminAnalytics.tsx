@@ -1,45 +1,149 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { getAllRequests } from '@/lib/api/requestsApi'
 
 interface AnalyticsData {
   requestsByMonth: { month: string; count: number }[]
   requestsByType: { type: string; count: number; percentage: number }[]
   avgProcessingTime: number
   approvalRate: number
+  totalRequests: number
+  activeRequests: number
 }
 
 export default function AdminAnalytics() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
+  const [loading, setLoading] = useState(true)
+
+  const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'A apărut o eroare neașteptată')
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/requests/analytics?timeframe=${timeframe}`)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load analytics')
+      }
+
+      setData(result.data)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      toast.error(`Eroare la încărcarea analizei: ${message}`)
+      console.error('Analytics error:', message)
+    } finally {
+      setLoading(false)
+    }
+  }, [timeframe])
 
   useEffect(() => {
     loadAnalytics()
-  }, [timeframe])
+  }, [loadAnalytics])
 
-  const loadAnalytics = async () => {
-    // Mock data - replace with real API call
-    const mockData: AnalyticsData = {
-      requestsByMonth: [
-        { month: 'Ian', count: 45 },
-        { month: 'Feb', count: 52 },
-        { month: 'Mar', count: 61 },
-        { month: 'Apr', count: 58 },
-        { month: 'Mai', count: 70 },
-        { month: 'Iun', count: 89 }
-      ],
-      requestsByType: [
-        { type: 'Certificat Urbanism', count: 145, percentage: 42 },
-        { type: 'Autorizație Construire', count: 98, percentage: 28 },
-        { type: 'Autorizație Demolare', count: 67, percentage: 19 },
-        { type: 'Altele', count: 38, percentage: 11 }
-      ],
-      avgProcessingTime: 3.2,
-      approvalRate: 87
+  const handleExportCSV = async () => {
+    try {
+      toast.loading('Pregătesc exportul CSV...', { id: 'export' })
+      
+      const requests = await getAllRequests()
+      
+      const headers = ['ID', 'Tip Cerere', 'Status', 'Data Creare', 'Prioritate']
+      const rows = requests.map(req => [
+        req.id,
+        req.request_type,
+        req.status,
+        new Date(req.created_at).toLocaleDateString('ro-RO'),
+        req.priority?.toString() || 'N/A'
+      ])
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `cereri_${timeframe}_${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+
+      toast.success('Export CSV completat!', { id: 'export' })
+    } catch (error: unknown) {
+      toast.error(`Eroare la export CSV: ${getErrorMessage(error)}`, { id: 'export' })
     }
-    setData(mockData)
   }
 
-  if (!data) {
+  const handleExportExcel = async () => {
+    try {
+      toast.loading('Pregătesc exportul Excel...', { id: 'export' })
+      
+      const requests = await getAllRequests()
+      
+      // Create Excel-compatible CSV (with BOM for UTF-8)
+      const headers = ['ID', 'Tip Cerere', 'Status', 'Data Creare', 'Prioritate', 'Email Utilizator']
+      const rows = requests.map(req => [
+        req.id,
+        req.request_type,
+        req.status,
+        new Date(req.created_at).toLocaleDateString('ro-RO'),
+        req.priority?.toString() || 'N/A',
+        req.user?.email || 'N/A'
+      ])
+
+      const csv = '\uFEFF' + [
+        headers.join('\t'),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join('\t'))
+      ].join('\n')
+
+      const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `cereri_${timeframe}_${new Date().toISOString().split('T')[0]}.xls`
+      link.click()
+
+      toast.success('Export Excel completat!', { id: 'export' })
+    } catch (error: unknown) {
+      toast.error(`Eroare la export Excel: ${getErrorMessage(error)}`, { id: 'export' })
+    }
+  }
+
+  const handleExportPDF = async () => {
+    try {
+      toast.loading('Generez raportul PDF...', { id: 'export' })
+
+      const requests = await getAllRequests()
+      const doc = new jsPDF()
+
+      doc.setFontSize(16)
+      doc.text('Raport Cereri - CityFix', 14, 18)
+      doc.setFontSize(11)
+      doc.text(`Generat la ${new Date().toLocaleString('ro-RO')}`, 14, 26)
+
+      autoTable(doc, {
+        startY: 32,
+        head: [['Tip cerere', 'Status', 'Cetățean', 'Funcționar', 'Creat la']],
+        body: requests.slice(0, 50).map(req => [
+          req.request_type,
+          req.status,
+          req.user.full_name || req.user.email,
+          req.assigned_clerk?.full_name || 'Nealocat',
+          new Date(req.created_at).toLocaleDateString('ro-RO')
+        ]),
+        styles: { fontSize: 9 }
+      })
+
+      doc.save(`raport-cereri-${timeframe}.pdf`)
+      toast.success('PDF generat cu succes!', { id: 'export' })
+    } catch (error: unknown) {
+      toast.error(`Eroare la export PDF: ${getErrorMessage(error)}`, { id: 'export' })
+    }
+  }
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -47,10 +151,20 @@ export default function AdminAnalytics() {
     )
   }
 
-  const maxCount = Math.max(...data.requestsByMonth.map(d => d.count))
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-gray-500">Nu s-au putut încărca datele de analiză</div>
+      </div>
+    )
+  }
+
+  const maxCount = Math.max(...data.requestsByMonth.map(d => d.count), 1)
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" />
+      
       {/* Timeframe Selector */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">Analiză & Rapoarte</h3>
@@ -75,7 +189,7 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Cereri"
-          value="348"
+          value={data.totalRequests.toString()}
           change="+12%"
           trend="up"
           icon="📊"
@@ -96,7 +210,7 @@ export default function AdminAnalytics() {
         />
         <MetricCard
           title="Cereri Active"
-          value="32"
+          value={data.activeRequests.toString()}
           change="-8%"
           trend="down"
           icon="⚡"
@@ -163,13 +277,22 @@ export default function AdminAnalytics() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h4 className="font-semibold text-gray-800 mb-4">Exportă Rapoarte</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <button className="px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-medium text-sm">
+          <button 
+            onClick={handleExportExcel}
+            className="px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-medium text-sm"
+          >
             📄 Export Excel
           </button>
-          <button className="px-4 py-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm">
+          <button 
+            onClick={handleExportPDF}
+            className="px-4 py-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
+          >
             📑 Export PDF
           </button>
-          <button className="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm">
+          <button 
+            onClick={handleExportCSV}
+            className="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm"
+          >
             📊 Export CSV
           </button>
         </div>

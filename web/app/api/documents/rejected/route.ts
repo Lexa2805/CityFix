@@ -28,35 +28,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Get requests separately
-    const requestIds = [...new Set(documents.map(d => d.request_id))]
+    const requestIds = [...new Set(documents.map((d) => d.request_id))]
     const { data: requests } = await supabase
       .from('requests')
       .select('id, request_type, user_id')
       .in('id', requestIds)
 
-    const requestsMap = new Map((requests || []).map(r => [r.id, r]))
+    const requestsMap = new Map((requests || []).map((r) => [r.id, r]))
 
     // Get user profiles
-    const userIds = [...new Set((requests || []).map(r => r.user_id))]
+    const userIds = [...new Set((requests || []).map((r) => r.user_id))]
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, email, full_name')
       .in('id', userIds)
 
-    const profilesMap = new Map((profiles || []).map(p => [p.id, p]))
+    const profilesMap = new Map((profiles || []).map((p) => [p.id, p]))
 
     // Combine data
-    const enrichedData = documents.map(doc => {
-      const req = requestsMap.get(doc.request_id)
-      return {
-        ...doc,
-        request: req ? {
-          id: req.id,
-          request_type: req.request_type,
-          user: profilesMap.get(req.user_id) || { email: '', full_name: null }
-        } : null
-      }
-    }).filter(doc => doc.request !== null)
+    const enrichedData = documents
+      .map((doc) => {
+        const req = requestsMap.get(doc.request_id)
+        return {
+          ...doc,
+          request: req
+            ? {
+                id: req.id,
+                request_type: req.request_type,
+                user:
+                  profilesMap.get(req.user_id) || {
+                    email: '',
+                    full_name: null
+                  }
+              }
+            : null
+        }
+      })
+      .filter((doc) => doc.request !== null)
 
     return NextResponse.json({ data: enrichedData })
   } catch (error: any) {

@@ -1,12 +1,24 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
 import { getUrgentRequests, autoAssignRequests, RequestWithDetails } from '../../lib/api/requestsApi'
-import { getPendingDocuments, getRejectedDocuments, DocumentWithRequest } from '../../lib/api/documentsApi'
+import { getRejectedDocuments, DocumentWithRequest } from '../../lib/api/documentsApi'
+
+interface ClerkAlert {
+  id: number
+  action_type: string
+  details: Record<string, unknown> | null
+  created_at: string
+  user?: {
+    full_name: string | null
+    email: string | null
+  } | null
+}
 
 export default function AdminSmartNotifications() {
   const [urgentRequests, setUrgentRequests] = useState<RequestWithDetails[]>([])
-  const [pendingDocs, setPendingDocs] = useState<DocumentWithRequest[]>([])
   const [rejectedDocs, setRejectedDocs] = useState<DocumentWithRequest[]>([])
+  const [clerkAlerts, setClerkAlerts] = useState<ClerkAlert[]>([])
   const [autoAssigning, setAutoAssigning] = useState(false)
 
   useEffect(() => {
@@ -18,20 +30,27 @@ export default function AdminSmartNotifications() {
 
   const loadData = async () => {
     try {
-      const [urgent, pending, rejected] = await Promise.all([
+      const [urgent, rejected, clerkData] = await Promise.all([
         getUrgentRequests(3),
-        getPendingDocuments(),
-        getRejectedDocuments()
+        getRejectedDocuments(),
+        fetch('/api/admin/clerk-alerts').then(async res => {
+          const result = await res.json()
+          if (!res.ok) {
+            throw new Error(result.error || 'Nu s-au putut încărca avertizările')
+          }
+          return result.data || []
+        })
       ])
       setUrgentRequests(urgent || [])
-      setPendingDocs(pending || [])
       setRejectedDocs(rejected || [])
-    } catch (error: any) {
-      console.error('Error loading notifications:', error.message || error)
+      setClerkAlerts(clerkData)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('Error loading notifications:', message)
       // Set empty arrays on error
       setUrgentRequests([])
-      setPendingDocs([])
       setRejectedDocs([])
+      setClerkAlerts([])
     }
   }
 
@@ -40,17 +59,18 @@ export default function AdminSmartNotifications() {
       setAutoAssigning(true)
       const result = await autoAssignRequests()
       if (result.success) {
-        alert(`✅ ${result.assigned_count} cereri alocate automat către funcționari!`)
+        toast.success(`${result.assigned_count} cereri au fost alocate funcționarilor.`)
         await loadData()
       }
-    } catch (error: any) {
-      alert('Eroare la alocarea automată: ' + (error.message || 'Eroare necunoscută'))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Eroare necunoscută'
+      toast.error('Eroare la alocarea automată: ' + message)
     } finally {
       setAutoAssigning(false)
     }
   }
 
-  const totalNotifications = urgentRequests.length + pendingDocs.length + rejectedDocs.length
+  const totalNotifications = urgentRequests.length + rejectedDocs.length + clerkAlerts.length
 
   if (totalNotifications === 0) {
     return null
@@ -58,6 +78,7 @@ export default function AdminSmartNotifications() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border-2 border-orange-200 p-6 mb-6">
+      <Toaster position="top-right" />
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
@@ -118,25 +139,6 @@ export default function AdminSmartNotifications() {
           </div>
         )}
 
-        {/* Pending Documents */}
-        {pendingDocs.length > 0 && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-600 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="flex-1">
-                <h4 className="font-semibold text-yellow-800 mb-1">
-                  Documente În Așteptare ({pendingDocs.length})
-                </h4>
-                <p className="text-sm text-yellow-700">
-                  Validare AI în curs de procesare
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Rejected Documents */}
         {rejectedDocs.length > 0 && (
           <div className="bg-orange-50 border-l-4 border-orange-600 rounded-lg p-4">
@@ -151,6 +153,34 @@ export default function AdminSmartNotifications() {
                 <p className="text-sm text-orange-700">
                   AI a detectat probleme - necesită verificare manuală
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Clerk Alerts */}
+        {clerkAlerts.length > 0 && (
+          <div className="bg-indigo-50 border-l-4 border-indigo-600 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <div className="flex-1">
+                <h4 className="font-semibold text-indigo-800 mb-1">
+                  Actualizări de la funcționari ({clerkAlerts.length})
+                </h4>
+                <div className="space-y-1">
+                  {clerkAlerts.slice(0, 3).map(alert => (
+                    <div key={alert.id} className="text-sm text-indigo-700">
+                      • {alert.user?.full_name || alert.user?.email || 'Funcționar necunoscut'} – {formatAlertLabel(alert.action_type)}
+                    </div>
+                  ))}
+                  {clerkAlerts.length > 3 && (
+                    <div className="text-sm text-indigo-600 font-medium">
+                      +{clerkAlerts.length - 3} actualizări suplimentare
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -179,4 +209,21 @@ export default function AdminSmartNotifications() {
       </div>
     </div>
   )
+}
+
+function formatAlertLabel(actionType: string): string {
+  switch (actionType) {
+    case 'clerk_manual_review':
+      return 'validare manuală finalizată'
+    case 'clerk_escalation':
+      return 'a escaladat o cerere'
+    case 'clerk_feedback':
+      return 'feedback din teren'
+    case 'issue_report':
+      return 'a raportat o problemă'
+    case 'document_issue':
+      return 'problemă document depistată'
+    default:
+      return actionType.replace(/_/g, ' ')
+  }
 }
