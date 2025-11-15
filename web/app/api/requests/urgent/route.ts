@@ -14,13 +14,9 @@ export async function GET(request: NextRequest) {
     const thresholdDate = new Date()
     thresholdDate.setDate(thresholdDate.getDate() + daysThreshold)
 
-    const { data, error } = await supabase
+    const { data: requests, error } = await supabase
       .from('requests')
-      .select(`
-        *,
-        user:profiles!requests_user_id_fkey(email, full_name),
-        assigned_clerk:profiles!requests_assigned_clerk_id_fkey(email, full_name)
-      `)
+      .select('*')
       .not('legal_deadline', 'is', null)
       .lte('legal_deadline', thresholdDate.toISOString())
       .in('status', ['pending_validation', 'in_review'])
@@ -30,6 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+<<<<<<< Updated upstream
     if (!requests || requests.length === 0) {
       return NextResponse.json({ data: [] })
     }
@@ -47,6 +44,27 @@ export async function GET(request: NextRequest) {
     const enrichedData = requests.map((req) => ({
       ...req,
       user: profilesMap.get(req.user_id) || { email: '', full_name: null }
+=======
+    // Fetch user and clerk details
+    const userIds = [...new Set(requests?.map(r => r.user_id).filter(Boolean))]
+    const clerkIds = [...new Set(requests?.map(r => r.assigned_clerk_id).filter(Boolean))]
+    
+    const { data: users } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds)
+    
+    const { data: clerks } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', clerkIds)
+
+    // Combine data
+    const enrichedData = requests?.map(req => ({
+      ...req,
+      user: users?.find(u => u.id === req.user_id) || { email: 'unknown', full_name: null },
+      assigned_clerk: clerks?.find(c => c.id === req.assigned_clerk_id) || null
+>>>>>>> Stashed changes
     }))
 
     return NextResponse.json({ data: enrichedData })

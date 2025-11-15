@@ -11,16 +11,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    const { data, error } = await supabase
+    const { data: documents, error } = await supabase
       .from('documents')
-      .select(`
-        *,
-        request:requests!documents_request_id_fkey(
-          id,
-          request_type,
-          user:profiles!requests_user_id_fkey(email, full_name)
-        )
-      `)
+      .select('*')
       .eq('validation_status', 'rejected')
       .order('uploaded_at', { ascending: false })
       .limit(limit)
@@ -29,26 +22,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+<<<<<<< Updated upstream
     if (!documents || documents.length === 0) {
       return NextResponse.json({ data: [] })
     }
 
     // Get requests separately
     const requestIds = [...new Set(documents.map((d) => d.request_id))]
+=======
+    // Fetch request details
+    const requestIds = [...new Set(documents?.map(d => d.request_id).filter(Boolean))]
+    
+>>>>>>> Stashed changes
     const { data: requests } = await supabase
       .from('requests')
       .select('id, request_type, user_id')
       .in('id', requestIds)
 
+<<<<<<< Updated upstream
     const requestsMap = new Map((requests || []).map((r) => [r.id, r]))
 
     // Get user profiles
     const userIds = [...new Set((requests || []).map((r) => r.user_id))]
     const { data: profiles } = await supabase
+=======
+    // Fetch user details
+    const userIds = [...new Set(requests?.map(r => r.user_id).filter(Boolean))]
+    const { data: users } = await supabase
+>>>>>>> Stashed changes
       .from('profiles')
       .select('id, email, full_name')
       .in('id', userIds)
 
+<<<<<<< Updated upstream
     const profilesMap = new Map((profiles || []).map((p) => [p.id, p]))
 
     // Combine data
@@ -71,6 +77,21 @@ export async function GET(request: NextRequest) {
         }
       })
       .filter((doc) => doc.request !== null)
+=======
+    // Combine data
+    const enrichedData = documents?.map(doc => {
+      const req = requests?.find(r => r.id === doc.request_id)
+      const user = users?.find(u => u.id === req?.user_id)
+      return {
+        ...doc,
+        request: req ? {
+          id: req.id,
+          request_type: req.request_type,
+          user: user || { email: 'unknown', full_name: null }
+        } : null
+      }
+    })
+>>>>>>> Stashed changes
 
     return NextResponse.json({ data: enrichedData })
   } catch (error: any) {
