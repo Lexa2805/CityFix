@@ -55,7 +55,7 @@ def detect_document_type(file_bytes: bytes, filename: str = "") -> str:
                 return "unknown"
             
             response = client.chat.completions.create(
-                model="openai/gpt-4o",
+                model="gpt-4o-mini",
                 response_format={"type": "json_object"},
                 messages=[
                     {
@@ -83,7 +83,7 @@ Răspunde DOAR în format JSON: {"document_type": "tip"}"""
             base64_image = base64.b64encode(file_bytes).decode("utf-8")
             
             response = client.chat.completions.create(
-                model="openai/gpt-4o",
+                model="gpt-4o-mini",
                 response_format={"type": "json_object"},
                 messages=[
                     {

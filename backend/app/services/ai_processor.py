@@ -57,7 +57,7 @@ def validate_id_card(file_bytes: bytes) -> dict:
 
         # Folosim formatul de mesaje OpenAI compatibil cu OpenRouter
         response = client.chat.completions.create(
-            model="openai/gpt-4o",  # Model de viziune prin OpenRouter
+            model="gpt-4o-mini",  # Model de viziune prin OpenRouter
             response_format={"type": "json_object"},
             messages=[
                 {
