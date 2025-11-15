@@ -104,7 +104,7 @@ def chatbot(request: ChatRequest):
     1. Identifies what the citizen wants to do (build, demolish, etc.)
     2. Lists required documents for that procedure
     3. Tracks uploaded documents and shows what's missing
-    4. Answers questions about urbanism using RAG
+    4. Answers questions about urbanism using RAG 
     """
     try:
         # Load local documents from knowledge_base folder
