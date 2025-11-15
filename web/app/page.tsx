@@ -1,6 +1,42 @@
+'use client'
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Home() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsAuthenticated(!!user);
+    setLoading(false);
+  };
+
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      router.push('/login');
+    } else {
+      router.push('/chat');
+    }
+  };
+
+  const handleUploadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      router.push('/login');
+    } else {
+      router.push('/upload');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -17,20 +53,20 @@ export default function Home() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link
-              href="/chat"
+            <button
+              onClick={handleChatClick}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-purple-700 transition-all hover:shadow-xl"
             >
               <span>💬</span>
               <span>Începe o conversație</span>
-            </Link>
-            <Link
-              href="/upload"
+            </button>
+            <button
+              onClick={handleUploadClick}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-white border-2 border-purple-600 px-8 py-4 text-lg font-semibold text-purple-600 shadow-lg hover:bg-purple-50 transition-all"
             >
               <span>📤</span>
               <span>Încarcă documente</span>
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -122,15 +158,22 @@ export default function Home() {
         {/* Quick Links */}
         <div className="mt-16 text-center">
           <p className="text-gray-600 mb-4">Ai deja un dosar în curs?</p>
-          <Link
-            href="/citizen/requests"
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (!isAuthenticated) {
+                router.push('/login');
+              } else {
+                router.push('/citizen/requests');
+              }
+            }}
             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
           >
             <span>Vezi dosarele tale</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </Link>
+          </button>
         </div>
       </main>
 

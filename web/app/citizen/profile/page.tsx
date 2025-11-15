@@ -124,24 +124,29 @@ export default function ProfilePage() {
                 return
             }
 
-            // Șterge toate cererile utilizatorului
-            await supabase
-                .from('requests')
-                .delete()
-                .eq('citizen_id', user.id)
+            // Apelează API route pentru ștergere completă
+            // Aceasta va șterge utilizatorul din Authentication Users
+            // Trigger-ul SQL va șterge automat profilul și toate datele asociate
+            const response = await fetch('/api/delete-user', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.id }),
+            })
 
-            // Șterge profilul
-            await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', user.id)
+            const data = await response.json()
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Nu s-a putut șterge contul.')
+            }
 
             // Logout și redirecționare
             await supabase.auth.signOut()
             router.push('/')
         } catch (error: any) {
             console.error('Delete error:', error)
-            setMessage({ type: 'error', text: 'Eroare la ștergerea contului' })
+            setMessage({ type: 'error', text: error.message || 'Eroare la ștergerea contului' })
             setDeleting(false)
         }
     }
