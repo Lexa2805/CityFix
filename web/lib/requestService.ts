@@ -43,6 +43,9 @@ export interface CreateRequestData {
  * Creează o cerere nouă
  */
 export async function createRequest(data: CreateRequestData) {
+  // Așteaptă ca sesiunea să fie încărcată
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
@@ -80,6 +83,9 @@ export async function createRequest(data: CreateRequestData) {
  * Obține toate cererile utilizatorului curent
  */
 export async function getUserRequests() {
+  // Așteaptă ca sesiunea să fie încărcată
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {

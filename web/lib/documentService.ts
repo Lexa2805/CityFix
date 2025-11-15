@@ -22,6 +22,9 @@ export interface UploadDocumentData {
 export async function uploadDocument(data: UploadDocumentData): Promise<Document> {
   const { requestId, file } = data
   
+  // Așteaptă ca sesiunea să fie încărcată
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('User not authenticated')

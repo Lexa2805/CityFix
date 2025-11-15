@@ -234,7 +234,7 @@ export default function LoginPage() {
                             />
                             <span className="text-sm text-gray-700">Ține-mă minte</span>
                         </label>
-                        <a href="#" className="text-sm text-purple-600 hover:text-purple-700 transition-colors">
+                        <a href="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 transition-colors">
                             Am uitat parola
                         </a>
                     </div>

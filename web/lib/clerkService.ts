@@ -45,6 +45,9 @@ export interface PrioritizedRequest extends RequestWithDetails {
 
 // Funcția de statistici (rămâne neschimbată)
 export async function getClerkStats(): Promise<ClerkStats> {
+    // Așteaptă ca sesiunea să fie încărcată
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -102,47 +105,97 @@ export async function getClerkStats(): Promise<ClerkStats> {
 }
 
 // ==========================================================
-// FUNCȚIA MODIFICATĂ PENTRU A APELA BACKEND-UL
+// FUNCȚIA PENTRU CERERI PRIORITIZATE
 // ==========================================================
 export async function getPrioritizedRequests(): Promise<PrioritizedRequest[]> {
+    // Așteaptă ca sesiunea să fie încărcată
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Setează adresa backend-ului tău FastAPI
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-
-    try {
-        console.log("Fetching prioritized requests from FastAPI backend...");
-
-        // 1. Apelăm backend-ul FastAPI
-        const response = await fetch(`${API_URL}/clerk/requests/status`);
-
-        if (!response.ok) {
-            // AICI APARE EROAREA TA CÂND SERVERUL E OPRIT
-            const err = await response.text(); // Luăm textul erorii
-            console.error("Failed to fetch from FastAPI backend", response.status, response.statusText, err);
-            throw new Error('Failed to fetch prioritized requests. Asigură-te că serverul backend (FastAPI) rulează.');
-        }
-
-        let data = await response.json();
-        console.log(`Fetched ${data.length} requests from backend.`);
-
-        // 2. Mapăm datele pentru a se potrivi 100% cu componenta
-        const formattedData = data.map((req: any) => ({
-            ...req,
-            // Creăm câmpul 'citizen_name' pe care îl folosește componenta
-            citizen_name: req.user_profile?.full_name || 'N/A',
-            // Redenumim 'days_until_deadline' în 'days_left' pentru a se potrivi cu noul cod
-            days_left: req.days_until_deadline
-        }));
-
-        return formattedData as PrioritizedRequest[];
-
-    } catch (error) {
-        console.error('Error in getPrioritizedRequests:', error);
-        if (error instanceof TypeError && error.message.includes('fetch failed')) {
-            throw new Error('Conexiunea la backend-ul FastAPI (http://127.0.0.1:8000) a eșuat. Este pornit?');
-        }
-        throw error;
+    if (!user) {
+        throw new Error('User not authenticated')
     }
+
+    // Query TOATE cererile active (pending_validation și in_review)
+    const { data: requests, error } = await supabase
+        .from('requests')
+        .select('*')
+        .in('status', ['pending_validation', 'in_review'])
+
+    if (error) {
+        console.error('Error fetching prioritized requests:', error)
+        throw error
+    }
+
+    if (!requests || requests.length === 0) {
+        return []
+    }
+
+    // Get user profiles
+    const userIds = [...new Set(requests.map(r => r.user_id))]
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+
+    const profilesMap = new Map((profiles || []).map(p => [p.id, p]))
+
+    // Enrichment și calculare SCOR DE PRIORITATE
+    const enrichedRequests = requests.map(req => {
+        let daysUntilDeadline: number | null = null
+        if (req.legal_deadline) {
+            const deadline = new Date(req.legal_deadline)
+            const now = new Date()
+            const diffTime = deadline.getTime() - now.getTime()
+            daysUntilDeadline = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        }
+
+        const profile = profilesMap.get(req.user_id)
+
+        // CALCUL SCOR PRIORITATE INTELIGENT
+        // Scor = (prioritate manuală * 10) + bonus deadline + bonus vechime
+        let priorityScore = (req.priority || 0) * 10
+
+        // Bonus deadline: cereri cu deadline apropiat = urgență maximă
+        if (daysUntilDeadline !== null) {
+            if (daysUntilDeadline <= 0) {
+                priorityScore += 100 // DEPĂȘIT - urgență maximă
+            } else if (daysUntilDeadline <= 3) {
+                priorityScore += 50 // Sub 3 zile - foarte urgent
+            } else if (daysUntilDeadline <= 7) {
+                priorityScore += 30 // Sub 7 zile - urgent
+            } else if (daysUntilDeadline <= 14) {
+                priorityScore += 10 // Sub 14 zile - atenție
+            }
+        }
+
+        // Bonus vechime: cereri vechi = mai prioritare
+        const daysOld = Math.floor((Date.now() - new Date(req.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        if (daysOld > 30) {
+            priorityScore += 20
+        } else if (daysOld > 14) {
+            priorityScore += 10
+        } else if (daysOld > 7) {
+            priorityScore += 5
+        }
+
+        return {
+            ...req,
+            citizen_name: profile?.full_name || 'N/A',
+            days_left: daysUntilDeadline,
+            days_until_deadline: daysUntilDeadline,
+            user_profile: profile ? { full_name: profile.full_name } : null,
+            priority_score: priorityScore
+        }
+    })
+
+    // Sortare după scor prioritate (descrescător) și limitare la top 20
+    const sortedRequests = enrichedRequests
+        .sort((a, b) => b.priority_score - a.priority_score)
+        .slice(0, 20)
+
+    return sortedRequests as PrioritizedRequest[]
 }
 
 // ==========================================================
@@ -157,6 +210,9 @@ export interface GetRequestsOptions {
 export async function getAllRequestsForClerk(options: GetRequestsOptions = {}): Promise<RequestWithDetails[]> {
     const { assignedToMe = false, sortBy = 'created_at', status } = options
 
+    // Așteaptă ca sesiunea să fie încărcată
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -165,10 +221,7 @@ export async function getAllRequestsForClerk(options: GetRequestsOptions = {}): 
 
     let query = supabase
         .from('requests')
-        .select(`
-            *,
-            user_profile:profiles!user_id(full_name, role)
-        `)
+        .select('*')
 
     // Filter by assigned clerk if requested
     if (assignedToMe) {
@@ -198,16 +251,29 @@ export async function getAllRequestsForClerk(options: GetRequestsOptions = {}): 
             break
     }
 
-    const { data, error } = await query
+    const { data: requests, error } = await query
 
     if (error) {
         console.error('Error fetching requests:', error)
         throw error
     }
 
+    if (!requests || requests.length === 0) {
+        return []
+    }
+
+    // Get user profiles separately
+    const userIds = [...new Set(requests.map(r => r.user_id))]
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .in('id', userIds)
+
+    const profilesMap = new Map((profiles || []).map(p => [p.id, p]))
+
     // Get documents count for each request
     const requestsWithCounts = await Promise.all(
-        (data || []).map(async (request) => {
+        requests.map(async (request) => {
             const { count } = await supabase
                 .from('documents')
                 .select('*', { count: 'exact', head: true })
@@ -222,8 +288,11 @@ export async function getAllRequestsForClerk(options: GetRequestsOptions = {}): 
                 daysUntilDeadline = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
             }
 
+            const profile = profilesMap.get(request.user_id)
+
             return {
                 ...request,
+                user_profile: profile || null,
                 documents_count: count || 0,
                 days_until_deadline: daysUntilDeadline
             }
