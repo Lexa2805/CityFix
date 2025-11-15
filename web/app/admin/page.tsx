@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import AdminUserManagement from '../../components/admin/AdminUserManagement'
 import AdminAnalytics from '../../components/admin/AdminAnalytics'
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'overview' && <OverviewTab />}
+                    {activeTab === 'overview' && <OverviewTab onNavigate={setActiveTab} />}
                 {activeTab === 'users' && <AdminUserManagement />}
                 {activeTab === 'activity' && <ActivityTab />}
                 {activeTab === 'analytics' && <AdminAnalytics />}
@@ -152,39 +152,106 @@ function TabButton({
     )
 }
 
-function OverviewTab() {
+interface OverviewData {
+    summary: {
+        totalUsers: number
+        requestsThisMonth: number
+        avgProcessingTime: number
+        approvalRate: number
+        activeRequests: number
+        newUsersThisMonth: number
+    }
+    userManagement: {
+        activeClerks: number
+        pendingAccess: number
+    }
+    content: {
+        documentsTotal: number
+        requestTemplates: number
+        legislationUpdates: number
+    }
+    reports: {
+        aiFlags: number
+        autoAssignmentsThisWeek: number
+        exportsThisWeek: number
+    }
+}
+
+function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
+    const [data, setData] = useState<OverviewData | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const formatter = new Intl.NumberFormat('ro-RO')
+
+    const loadOverview = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/admin/overview')
+            const result = await response.json()
+            if (!response.ok) {
+                throw new Error(result.error || 'Nu s-au putut încărca datele')
+            }
+            setData(result.data)
+            setError(null)
+        } catch (err: any) {
+            setError(err.message || 'Eroare necunoscută')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        loadOverview()
+    }, [])
+
+    const formatNumber = (value?: number) => formatter.format(value ?? 0)
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
+                <p className="text-red-600 font-semibold mb-3">{error}</p>
+                <button
+                    onClick={loadOverview}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                >
+                    Reîncearcă
+                </button>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
             {/* Smart Notifications */}
             <AdminSmartNotifications />
 
             {/* Quick Actions Panel */}
-            <AdminQuickActions />
+            <AdminQuickActions onNavigate={onNavigate} />
 
             {/* System Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <AdminStatCard
                     title="Total Utilizatori"
-                    value="247"
-                    change="+12%"
+                    value={loading ? '...' : formatNumber(data?.summary.totalUsers)}
+                    change={loading ? '' : `+${formatNumber(data?.summary.newUsersThisMonth)} luna curentă`}
                     positive={true}
                 />
                 <AdminStatCard
                     title="Cereri Luna Aceasta"
-                    value="89"
-                    change="+8%"
+                    value={loading ? '...' : formatNumber(data?.summary.requestsThisMonth)}
+                    change={loading ? '' : `${formatNumber(data?.summary.activeRequests)} active`}
                     positive={true}
                 />
                 <AdminStatCard
                     title="Timp Mediu Procesare"
-                    value="3.2 zile"
-                    change="-15%"
-                    positive={true}
+                    value={loading ? '...' : `${data?.summary.avgProcessingTime ?? 0} zile`}
+                    change={loading ? '' : `${formatNumber(data?.reports.autoAssignmentsThisWeek)} auto-assign`}
+                    positive={(data?.summary.avgProcessingTime || 0) <= 5}
                 />
                 <AdminStatCard
                     title="Rata Aprobare"
-                    value="87%"
-                    change="+2%"
+                    value={loading ? '...' : `${data?.summary.approvalRate ?? 0}%`}
+                    change={loading ? '' : `${formatNumber(data?.reports.aiFlags)} respinse AI`}
                     positive={true}
                 />
             </div>
@@ -200,9 +267,9 @@ function OverviewTab() {
                         Gestionare Utilizatori
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Vezi toți utilizatorii" count="247" />
-                        <AdminActionButton title="Funcționari activi" count="12" />
-                        <AdminActionButton title="Cereri de acces" count="3" />
+                        <AdminActionButton title="Vezi toți utilizatorii" count={loading ? undefined : formatNumber(data?.summary.totalUsers)} />
+                        <AdminActionButton title="Funcționari activi" count={loading ? undefined : formatNumber(data?.userManagement.activeClerks)} />
+                        <AdminActionButton title="Cereri de acces" count={loading ? undefined : formatNumber(data?.userManagement.pendingAccess)} />
                     </div>
                 </div>
 
@@ -231,9 +298,9 @@ function OverviewTab() {
                         Gestionare Conținut
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Documente în sistem" count="1,234" />
-                        <AdminActionButton title="Șabloane cereri" count="15" />
-                        <AdminActionButton title="Legislație actualizată" />
+                        <AdminActionButton title="Documente în sistem" count={loading ? undefined : formatNumber(data?.content.documentsTotal)} />
+                        <AdminActionButton title="Șabloane cereri" count={loading ? undefined : formatNumber(data?.content.requestTemplates)} />
+                        <AdminActionButton title="Legislație actualizată" count={loading ? undefined : formatNumber(data?.content.legislationUpdates)} />
                     </div>
                 </div>
 
@@ -246,9 +313,9 @@ function OverviewTab() {
                         Rapoarte & Analize
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Raport lunar" />
-                        <AdminActionButton title="Statistici AI" />
-                        <AdminActionButton title="Export date" />
+                        <AdminActionButton title="Raport lunar" count={loading ? undefined : formatNumber(data?.summary.requestsThisMonth)} />
+                        <AdminActionButton title="Statistici AI" count={loading ? undefined : formatNumber(data?.reports.aiFlags)} />
+                        <AdminActionButton title="Export date" count={loading ? undefined : formatNumber(data?.reports.exportsThisWeek)} />
                     </div>
                 </div>
             </div>
