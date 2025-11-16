@@ -219,29 +219,81 @@ export default function AdminAnalytics() {
 
       {/* Chart: Requests by Month */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h4 className="font-semibold text-gray-800 mb-6">Evoluție Cereri (Lunar)</h4>
-        <div className="flex items-end justify-between h-64 gap-4">
-          {data.requestsByMonth.map((item, idx) => {
-            const height = (item.count / maxCount) * 100
-            return (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                <div className="relative w-full h-full flex items-end">
-                  <div
-                    className="w-full bg-gradient-to-t from-purple-600 to-purple-400 rounded-t-lg hover:from-purple-700 hover:to-purple-500 transition-all cursor-pointer group relative"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                        {item.count}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-gray-600">{item.month}</span>
-              </div>
-            )
-          })}
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="font-semibold text-gray-800">Evoluție Cereri (Lunar)</h4>
+          <span className="text-sm text-gray-600">
+            Total: {data.requestsByMonth.reduce((sum, item) => sum + item.count, 0)} cereri
+          </span>
         </div>
+        
+        {data.requestsByMonth.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <p className="font-medium">Nicio cerere în perioada selectată</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Y-axis labels */}
+            <div className="flex items-end justify-between h-64 gap-2">
+              {/* Y-axis with grid lines */}
+              <div className="flex flex-col justify-between h-full pr-2 text-xs text-gray-500 border-r border-gray-200">
+                <span>{maxCount}</span>
+                <span>{Math.floor(maxCount * 0.75)}</span>
+                <span>{Math.floor(maxCount * 0.5)}</span>
+                <span>{Math.floor(maxCount * 0.25)}</span>
+                <span>0</span>
+              </div>
+              
+              {/* Bars */}
+              <div className="flex-1 flex items-end justify-between h-full gap-2 relative">
+                {/* Horizontal grid lines */}
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                  {[0, 25, 50, 75, 100].map((_, idx) => (
+                    <div key={idx} className="border-t border-gray-100 w-full"></div>
+                  ))}
+                </div>
+                
+                {data.requestsByMonth.map((item, idx) => {
+                  const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0
+                  const minHeight = item.count > 0 ? 4 : 0 // Minimum visible height for non-zero values
+                  
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 relative z-10">
+                      <div className="relative w-full h-full flex items-end justify-center">
+                        <div
+                          className="w-full max-w-[60px] bg-gradient-to-t from-purple-600 to-purple-400 rounded-t-lg hover:from-purple-700 hover:to-purple-500 transition-all cursor-pointer group relative shadow-sm"
+                          style={{ height: `${Math.max(height, minHeight)}%` }}
+                        >
+                          {/* Count label on top of bar */}
+                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
+                            <span className="text-xs font-semibold text-gray-800 bg-white px-1.5 py-0.5 rounded border border-gray-200 shadow-sm">
+                              {item.count}
+                            </span>
+                          </div>
+                          
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                              <div className="font-semibold">{item.month}</div>
+                              <div>{item.count} {item.count === 1 ? 'cerere' : 'cereri'}</div>
+                            </div>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                              <div className="border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Month label */}
+                      <span className="text-xs font-medium text-gray-700 mt-1">{item.month}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Request Types Distribution */}

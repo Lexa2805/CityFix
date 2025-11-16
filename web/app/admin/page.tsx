@@ -267,9 +267,9 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
                         Gestionare Utilizatori
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Vezi toți utilizatorii" count={loading ? undefined : formatNumber(data?.summary.totalUsers)} />
-                        <AdminActionButton title="Funcționari activi" count={loading ? undefined : formatNumber(data?.userManagement.activeClerks)} />
-                        <AdminActionButton title="Cereri de acces" count={loading ? undefined : formatNumber(data?.userManagement.pendingAccess)} />
+                        <AdminInfoItem title="Total utilizatori" count={loading ? '...' : formatNumber(data?.summary.totalUsers)} />
+                        <AdminInfoItem title="Funcționari activi" count={loading ? '...' : formatNumber(data?.userManagement.activeClerks)} />
+                        <AdminInfoItem title="Cereri de acces" count={loading ? '...' : formatNumber(data?.userManagement.pendingAccess)} />
                     </div>
                 </div>
 
@@ -283,9 +283,9 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
                         Configurare Sistem
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Setări generale" />
-                        <AdminActionButton title="Configurare AI" />
-                        <AdminActionButton title="Bază de cunoștințe RAG" />
+                        <AdminInfoItem title="Setări generale" icon="⚙️" />
+                        <AdminInfoItem title="Configurare AI" icon="🤖" />
+                        <AdminInfoItem title="Bază de cunoștințe RAG" icon="📚" />
                     </div>
                 </div>
 
@@ -298,9 +298,9 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
                         Gestionare Conținut
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Documente în sistem" count={loading ? undefined : formatNumber(data?.content.documentsTotal)} />
-                        <AdminActionButton title="Șabloane cereri" count={loading ? undefined : formatNumber(data?.content.requestTemplates)} />
-                        <AdminActionButton title="Legislație actualizată" count={loading ? undefined : formatNumber(data?.content.legislationUpdates)} />
+                        <AdminInfoItem title="Documente în sistem" count={loading ? '...' : formatNumber(data?.content.documentsTotal)} />
+                        <AdminInfoItem title="Șabloane cereri" count={loading ? '...' : formatNumber(data?.content.requestTemplates)} />
+                        <AdminInfoItem title="Legislație actualizată" count={loading ? '...' : formatNumber(data?.content.legislationUpdates)} />
                     </div>
                 </div>
 
@@ -313,9 +313,9 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
                         Rapoarte & Analize
                     </h3>
                     <div className="space-y-3">
-                        <AdminActionButton title="Raport lunar" count={loading ? undefined : formatNumber(data?.summary.requestsThisMonth)} />
-                        <AdminActionButton title="Statistici AI" count={loading ? undefined : formatNumber(data?.reports.aiFlags)} />
-                        <AdminActionButton title="Export date" count={loading ? undefined : formatNumber(data?.reports.exportsThisWeek)} />
+                        <AdminInfoItem title="Raport lunar" count={loading ? '...' : formatNumber(data?.summary.requestsThisMonth)} />
+                        <AdminInfoItem title="Statistici AI" count={loading ? '...' : formatNumber(data?.reports.aiFlags)} />
+                        <AdminInfoItem title="Export date" count={loading ? '...' : formatNumber(data?.reports.exportsThisWeek)} />
                     </div>
                 </div>
             </div>
@@ -324,14 +324,218 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
 }
 
 function ActivityTab() {
+    const [activities, setActivities] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | '90d' | 'all'>('7d')
+    const [actionFilter, setActionFilter] = useState<string>('all')
+    const [stats, setStats] = useState<any>(null)
+
+    const loadActivities = async () => {
+        try {
+            setLoading(true)
+            const params = new URLSearchParams({ timeframe, limit: '100' })
+            if (actionFilter !== 'all') {
+                params.append('action_type', actionFilter)
+            }
+
+            const response = await fetch(`/api/admin/activity?${params}`)
+            const result = await response.json()
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to load activities')
+            }
+
+            setActivities(result.data.activities)
+            setStats(result.data.stats)
+        } catch (error) {
+            console.error('Error loading activities:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        loadActivities()
+    }, [timeframe, actionFilter])
+
+    const getActionLabel = (actionType: string): string => {
+        const labels: Record<string, string> = {
+            login: 'Autentificare',
+            logout: 'Deconectare',
+            create_request: 'Cerere Creată',
+            update_request: 'Cerere Actualizată',
+            delete_request: 'Cerere Ștearsă',
+            upload_document: 'Document Încărcat',
+            delete_document: 'Document Șters',
+            document_approve: 'Document Aprobat',
+            document_reject: 'Document Respins',
+            role_change: 'Schimbare Rol',
+            account_create: 'Cont Creat',
+            account_disable: 'Cont Modificat',
+            assign_clerk: 'Alocare Funcționar',
+            unassign_clerk: 'Dealocare Funcționar',
+            update_priority: 'Actualizare Prioritate'
+        }
+        return labels[actionType] || actionType
+    }
+
+    const getActionIcon = (actionType: string): string => {
+        const icons: Record<string, string> = {
+            login: '🔓',
+            logout: '🔒',
+            create_request: '📝',
+            update_request: '✏️',
+            delete_request: '🗑️',
+            upload_document: '📤',
+            delete_document: '🗑️',
+            document_approve: '✅',
+            document_reject: '❌',
+            role_change: '👤',
+            account_create: '➕',
+            account_disable: '⚙️',
+            assign_clerk: '👥',
+            unassign_clerk: '👤',
+            update_priority: '⭐'
+        }
+        return icons[actionType] || '📌'
+    }
+
+    const formatDate = (dateString: string): string => {
+        const date = new Date(dateString)
+        return date.toLocaleString('ro-RO', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                Istoric Activitate Sistem (În Dezvoltare)
-            </h3>
-            <p className="text-gray-600">
-                Aici va fi afișat istoricul complet al activității din sistem, cu filtre pentru tipuri de acțiuni și utilizatori.
-            </p>
+        <div className="space-y-6">
+            {/* Header with Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <h3 className="text-lg font-semibold text-gray-800">
+                        Istoric Activitate Sistem
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        {/* Timeframe Filter */}
+                        <select
+                            value={timeframe}
+                            onChange={(e) => setTimeframe(e.target.value as any)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                            <option value="24h">Ultimele 24 ore</option>
+                            <option value="7d">Ultimele 7 zile</option>
+                            <option value="30d">Ultimele 30 zile</option>
+                            <option value="90d">Ultimele 90 zile</option>
+                            <option value="all">Toate</option>
+                        </select>
+
+                        {/* Action Type Filter */}
+                        <select
+                            value={actionFilter}
+                            onChange={(e) => setActionFilter(e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                            <option value="all">Toate acțiunile</option>
+                            <option value="login">Autentificări</option>
+                            <option value="create_request">Cereri create</option>
+                            <option value="upload_document">Documente încărcate</option>
+                            <option value="document_approve">Documente aprobate</option>
+                            <option value="document_reject">Documente respinse</option>
+                            <option value="role_change">Schimbări rol</option>
+                            <option value="assign_clerk">Alocări funcționar</option>
+                        </select>
+
+                        <button
+                            onClick={loadActivities}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                        >
+                            🔄 Reîmprospătează
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Statistics Cards */}
+            {stats && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <p className="text-sm text-gray-900 mb-1">Total Activități</p>
+                        <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <p className="text-sm text-gray-900 mb-1">Tipuri de Acțiuni</p>
+                        <p className="text-3xl font-bold text-gray-800">{Object.keys(stats.actionCounts || {}).length}</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <p className="text-sm text-gray-900 mb-1">Utilizatori Activi</p>
+                        <p className="text-3xl font-bold text-gray-800">{stats.mostActiveUsers?.length || 0}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Activity Timeline */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                    <h4 className="font-semibold text-gray-800">Timeline Activități</h4>
+                </div>
+                <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                        </div>
+                    ) : activities.length === 0 ? (
+                        <div className="text-center py-12">
+                            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">Nicio activitate găsită</h3>
+                            <p className="mt-1 text-sm text-gray-700">
+                                Nu există activități pentru filtrul selectat.
+                            </p>
+                        </div>
+                    ) : (
+                        activities.map((activity) => (
+                            <div key={activity.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-xl">
+                                        {getActionIcon(activity.action_type)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                            <span className="font-semibold text-gray-800">
+                                                {activity.user?.full_name || activity.user?.email || 'Utilizator necunoscut'}
+                                            </span>
+                                            <span className="text-gray-700">•</span>
+                                            <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+                                                {getActionLabel(activity.action_type)}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-800 mb-1">
+                                            {formatDate(activity.created_at)}
+                                        </p>
+                                        {activity.details && Object.keys(activity.details).length > 0 && (
+                                            <div className="mt-2 text-xs text-gray-900 bg-gray-50 rounded p-2 font-mono">
+                                                <pre className="whitespace-pre-wrap break-words">
+                                                    {JSON.stringify(activity.details, null, 2)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {activity.affected_user && (
+                                            <p className="text-xs text-gray-700 mt-1">
+                                                Utilizator afectat: {activity.affected_user.full_name || activity.affected_user.email}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
         </div>
     )
 }
@@ -344,7 +548,7 @@ function AdminStatCard({ title, value, change, positive }: {
 }) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <p className="text-sm text-gray-600 mb-1">{title}</p>
+            <p className="text-sm text-gray-900 mb-1">{title}</p>
             <div className="flex items-end justify-between">
                 <p className="text-3xl font-bold text-gray-800">{value}</p>
                 <span className={`text-sm font-medium ${positive ? 'text-green-600' : 'text-red-600'}`}>
@@ -355,15 +559,18 @@ function AdminStatCard({ title, value, change, positive }: {
     )
 }
 
-function AdminActionButton({ title, count }: { title: string; count?: string }) {
+function AdminInfoItem({ title, count, icon }: { title: string; count?: string; icon?: string }) {
     return (
-        <button className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors group">
-            <span className="text-sm font-medium text-gray-700 group-hover:text-purple-700">{title}</span>
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+                {icon && <span className="text-lg">{icon}</span>}
+                <span className="text-sm font-medium text-gray-800">{title}</span>
+            </div>
             {count && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-full">
                     {count}
                 </span>
             )}
-        </button>
+        </div>
     )
 }

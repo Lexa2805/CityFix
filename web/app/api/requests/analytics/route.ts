@@ -44,33 +44,41 @@ export async function GET(request: NextRequest) {
     // Group by month
     const requestsByMonth: { month: string; count: number }[] = []
     const monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec']
-    const monthCounts: Record<string, number> = {}
+    
+    // Determine how many months to show based on timeframe
+    let monthsToShow = 6
+    if (timeframe === '7d') monthsToShow = 1
+    else if (timeframe === '30d') monthsToShow = 2
+    else if (timeframe === '90d') monthsToShow = 3
+    else if (timeframe === '1y') monthsToShow = 12
 
-    requests?.forEach(req => {
-      const date = new Date(req.created_at)
-      const monthKey = `${date.getFullYear()}-${date.getMonth()}`
-      monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1
-    })
-
-    // Convert to array format
-    Object.entries(monthCounts).forEach(([key, count]) => {
-      const [, monthIndex] = key.split('-')
-      const monthName = monthNames[parseInt(monthIndex, 10)]
-      requestsByMonth.push({ month: monthName, count })
-    })
-
-    // Ensure we have at least some months shown
-    if (requestsByMonth.length === 0) {
-      // Show last 6 months with 0 count
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date()
-        date.setMonth(date.getMonth() - i)
-        requestsByMonth.push({
-          month: monthNames[date.getMonth()],
-          count: 0
-        })
+    // Initialize all months with 0
+    const monthCounts: Record<string, { month: string; count: number }> = {}
+    for (let i = monthsToShow - 1; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
+      monthCounts[monthKey] = {
+        month: monthNames[date.getMonth()],
+        count: 0
       }
     }
+
+    // Fill in actual counts
+    requests?.forEach(req => {
+      const date = new Date(req.created_at)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
+      if (monthCounts[monthKey]) {
+        monthCounts[monthKey].count++
+      }
+    })
+
+    // Convert to array format (maintain chronological order)
+    Object.keys(monthCounts)
+      .sort()
+      .forEach(key => {
+        requestsByMonth.push(monthCounts[key])
+      })
 
     // Group by type with percentages
     const typeCounts: Record<string, number> = {}
