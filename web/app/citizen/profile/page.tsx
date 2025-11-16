@@ -201,7 +201,7 @@ export default function ProfilePage() {
                                 type="text"
                                 value={profile.full_name}
                                 onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
                                 required
                             />
                         </div>
@@ -228,7 +228,7 @@ export default function ProfilePage() {
                                 value={profile.phone || ''}
                                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                                 placeholder="+40 123 456 789"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
                             />
                         </div>
 
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                                 value={profile.address || ''}
                                 onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                                 placeholder="Str. Exemplu nr. 1, Bl. A, Sc. B, Ap. 10"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
                             />
                         </div>
 
@@ -254,7 +254,7 @@ export default function ProfilePage() {
                                 value={profile.city || ''}
                                 onChange={(e) => setProfile({ ...profile, city: e.target.value })}
                                 placeholder="Timișoara"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
                             />
                         </div>
                     </div>

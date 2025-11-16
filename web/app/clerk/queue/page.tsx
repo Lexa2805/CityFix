@@ -103,7 +103,7 @@ export default function ClerkQueuePage() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 {statusOptions.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -119,7 +119,7 @@ export default function ClerkQueuePage() {
                             <select
                                 value={assignedFilter}
                                 onChange={(e) => setAssignedFilter(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 <option value="all">Toate</option>
                                 <option value="unassigned">Neasignate</option>
@@ -135,7 +135,7 @@ export default function ClerkQueuePage() {
                             <select
                                 value={urgencyFilter}
                                 onChange={(e) => setUrgencyFilter(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 <option value="all">Toate</option>
                                 <option value="urgent">Urgente (≤3 zile)</option>

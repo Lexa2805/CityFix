@@ -38,7 +38,7 @@ export default function PasswordInput({
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
                     autoComplete={autoComplete}
-                    className={`block w-full rounded-lg border px-3.5 py-2.5 text-sm bg-white transition-colors pr-10
+                    className={`block w-full rounded-lg border px-3.5 py-2.5 text-sm bg-white text-gray-900 transition-colors pr-10
                         focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500
                         ${error ? 'border-red-300' : 'border-gray-300 hover:border-purple-300'}`}
                 />
