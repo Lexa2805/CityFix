@@ -11,12 +11,19 @@ export interface Message {
   suggested_action?: string;
 }
 
+// --- ÎNLOCUIRE COD ---
+
 // Types pentru răspunsul chatbot-ului de la API
 export interface ChatbotResponse {
   answer: string;
   checklist?: string[];
+  detected_procedure?: string;
+  needs_documents: boolean;
+  suggested_action: string;
+  available_procedures?: any[];
 }
 
+// --- SFÂRȘIT ÎNLOCUIRE ---
 export interface ChatbotRequest {
   message: string;
   dossier_id?: string;

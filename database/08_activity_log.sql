@@ -133,7 +133,7 @@ BEGIN
         jsonb_build_object(
             'entity_type', 'document',
             'entity_id', NEW.id::text,
-            'document_type', NEW.document_type,
+            'document_type', NEW.document_type_ai,
             'request_id', NEW.request_id::text
         )
     );

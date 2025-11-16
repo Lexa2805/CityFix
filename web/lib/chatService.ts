@@ -17,7 +17,7 @@ export class ChatService {
       .from('chat_messages')
       .insert({
         user_id: user.id,
-        role: message.role,
+        role: (message.role === 'user' || message.role === 'assistant') ? message.role : 'assistant',
         content: message.content,
         checklist: message.checklist || null,
         request_id: requestId || null,

@@ -17,6 +17,13 @@ from app.services.ai_processor import (
 from app.services.knowledge_loader import load_all_documents, search_relevant_chunks
 from app.services.document_classifier import detect_document_type
 from app.services.web_scraper import fetch_multiple_urls
+from app.services.urban_info_helper import (
+    detect_urban_info_request,
+    get_urban_info_instructions,
+    extract_cadastral_code_from_text,
+    extract_address_from_text,
+    get_troubleshooting_tips,
+)
 from app.services.document_requirements import (
     list_all_procedures,
     get_procedure_requirements,
@@ -120,6 +127,49 @@ def chatbot(request: ChatRequest):
     5. Maintains conversation history for context
     """
     try:
+        # Check if user is requesting urban information extract
+        if detect_urban_info_request(request.question):
+            # Extract cadastral code from question if provided (priority)
+            cadastral_code = extract_cadastral_code_from_text(request.question)
+            
+            # If no cadastral code, try to extract address
+            address = None
+            if not cadastral_code:
+                address = extract_address_from_text(request.question)
+            
+            # Get instructions for downloading urban info
+            instructions = get_urban_info_instructions(cadastral_code, address)
+            
+            # If user is asking for troubleshooting
+            if any(word in request.question.lower() for word in ["problem", "eroare", "nu merge", "nu functioneaza", "nu gasesc"]):
+                instructions["message"] += f"\n\n{get_troubleshooting_tips()}"
+            
+            # Save conversation to history
+            if request.user_id:
+                try:
+                    supabase.table("chat_messages").insert({
+                        "user_id": request.user_id,
+                        "role": "user",
+                        "content": request.question
+                    }).execute()
+                    
+                    supabase.table("chat_messages").insert({
+                        "user_id": request.user_id,
+                        "role": "assistant",
+                        "content": instructions["message"]
+                    }).execute()
+                except Exception as save_err:
+                    print(f"Warning: Could not save chat history: {save_err}")
+            
+            return ChatResponse(
+                answer=instructions["message"],
+                detected_procedure="informare_urbanism",
+                detected_domain="urbanism",
+                needs_documents=False,
+                suggested_action="download_urban_info" if not instructions["needs_cadastral_code"] else "provide_cadastral_code",
+                available_procedures=[]
+            )
+        
         # 1. Load conversation history if user_id provided
         conversation_history = []
         if request.user_id:
@@ -1005,6 +1055,68 @@ def llm2_validate_dossier(request: ValidateDossierRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Eroare la validarea dosarului: {str(e)}")
+
+
+# ============================================
+# Urban Information Helper Endpoint
+# ============================================
+
+class UrbanInfoRequest(BaseModel):
+    """Request pentru obținerea instrucțiunilor de descărcare extras urbanistic"""
+    cadastral_code: Optional[str] = None
+    address: Optional[str] = None
+    question: Optional[str] = None
+
+@app.post("/urban-info/instructions")
+def get_urban_info_guide(request: UrbanInfoRequest):
+    """
+    Returnează instrucțiuni detaliate pentru descărcarea extrasului de informare urbanistică
+    de pe portalul oficial al Primăriei Timișoara.
+    
+    Acest endpoint:
+    - Detectează dacă utilizatorul solicită un extras de informare urbanistică
+    - Extrage adresa din întrebare (dacă este furnizată)
+    - Oferă instrucțiuni pas cu pas personalizate
+    - Include link către portalul oficial
+    - Oferă sfaturi de depanare dacă sunt necesare
+    
+    Exemplu request:
+    {
+        "cadastral_code": "407839",
+        "address": "Strada Revolutiei, nr. 10",
+        "question": "Am nevoie de extras de informare urbanistica pentru parcela mea"
+    }
+    """
+    try:
+        cadastral_code = request.cadastral_code
+        address = request.address
+        
+        # Try to extract cadastral code from question if not provided
+        if not cadastral_code and request.question:
+            cadastral_code = extract_cadastral_code_from_text(request.question)
+        
+        # Try to extract address from question if not provided
+        if not address and request.question and not cadastral_code:
+            address = extract_address_from_text(request.question)
+        
+        # Get instructions
+        instructions = get_urban_info_instructions(cadastral_code, address)
+        
+        # Add troubleshooting if user mentions problems
+        if request.question and any(word in request.question.lower() for word in 
+            ["problem", "eroare", "nu merge", "nu functioneaza", "nu gasesc", "ajutor"]):
+            instructions["troubleshooting"] = get_troubleshooting_tips()
+        
+        return {
+            "success": True,
+            "data": instructions
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Eroare la generarea instrucțiunilor: {str(e)}"
+        )
 
 
 @app.post("/llm-workflow/complete")
