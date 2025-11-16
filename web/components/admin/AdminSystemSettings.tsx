@@ -111,7 +111,7 @@ export default function AdminSystemSettings() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-          <p className="text-gray-600">Se încarcă setările...</p>
+          <p className="text-gray-900">Se încarcă setările...</p>
         </div>
       </div>
     )
@@ -154,10 +154,10 @@ export default function AdminSystemSettings() {
               max="30"
               value={settings.email_reminder_days_before_deadline}
               onChange={(e) => setSettings({ ...settings, email_reminder_days_before_deadline: parseInt(e.target.value) })}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
               disabled={!settings.email_notifications_enabled}
             />
-            <p className="text-xs text-gray-500 mt-1">Primești notificare cu X zile înainte</p>
+            <p className="text-xs text-gray-800 mt-1">Primești notificare cu X zile înainte</p>
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function AdminSystemSettings() {
               className="w-full"
               disabled={!settings.ai_auto_validation_enabled}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-800 mt-1">
               AI acceptă documente doar dacă încrederea ≥ {Math.round(settings.ai_confidence_threshold * 100)}%
             </p>
           </div>
@@ -213,9 +213,9 @@ export default function AdminSystemSettings() {
               max="365"
               value={settings.legal_deadline_default_days}
               onChange={(e) => setSettings({ ...settings, legal_deadline_default_days: parseInt(e.target.value) })}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
             />
-            <p className="text-xs text-gray-500 mt-1">Termen legal implicit pentru cereri noi</p>
+            <p className="text-xs text-gray-800 mt-1">Termen legal implicit pentru cereri noi</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -227,9 +227,9 @@ export default function AdminSystemSettings() {
               max="100"
               value={settings.max_file_upload_size_mb}
               onChange={(e) => setSettings({ ...settings, max_file_upload_size_mb: parseInt(e.target.value) })}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
             />
-            <p className="text-xs text-gray-500 mt-1">Limită pentru fișiere încărcate de utilizatori</p>
+            <p className="text-xs text-gray-800 mt-1">Limită pentru fișiere încărcate de utilizatori</p>
           </div>
           <ToggleSetting
             label="Necesită Consimțământ GDPR"
@@ -260,10 +260,10 @@ export default function AdminSystemSettings() {
               max="30"
               value={settings.backup_frequency_days}
               onChange={(e) => setSettings({ ...settings, backup_frequency_days: parseInt(e.target.value) })}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
               disabled={!settings.auto_backup_enabled}
             />
-            <p className="text-xs text-gray-500 mt-1">Backup se face automat la fiecare X zile</p>
+            <p className="text-xs text-gray-800 mt-1">Backup se face automat la fiecare X zile</p>
           </div>
           <div className="flex gap-3 pt-2">
             <button
@@ -312,8 +312,8 @@ function ToggleSetting({
   return (
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p className={`font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>{label}</p>
-        <p className={`text-sm ${disabled ? 'text-gray-300' : 'text-gray-500'}`}>{description}</p>
+        <p className={`font-medium ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{label}</p>
+        <p className={`text-sm ${disabled ? 'text-gray-300' : 'text-gray-800'}`}>{description}</p>
       </div>
       <label className="relative inline-flex items-center cursor-pointer">
         <input
