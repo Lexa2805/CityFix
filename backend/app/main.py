@@ -22,6 +22,14 @@ from app.services.document_requirements import (
     get_procedure_requirements,
     check_missing_documents,
 )
+from app.services.city_hall_domains import (
+    list_all_domains,
+    list_all_extended_procedures,
+    detect_domain_from_question,
+    get_procedures_by_domain,
+    CITY_HALL_DOMAINS,
+    EXTENDED_PROCEDURES,
+)
 from app.config.urls import LEGAL_URLS
 
 # 🔹 NOU – pentru prioritizare cereri
@@ -86,6 +94,7 @@ class UploadResponse(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     detected_procedure: Optional[str] = None
+    detected_domain: Optional[str] = None
     needs_documents: bool = False
     suggested_action: str = ""
     available_procedures: List[dict] = []
@@ -157,6 +166,20 @@ def chatbot(request: ChatRequest):
         
         # 4. Build conversation context
         conversation_context = {}
+        
+        # Extract previously detected domain from conversation history
+        detected_domain_from_history = None
+        for msg in reversed(conversation_history):
+            if msg.get("role") == "system" and "Domain detected" in msg.get("content", ""):
+                try:
+                    detected_domain_from_history = msg["content"].split("=")[-1].strip()
+                    break
+                except:
+                    pass
+        
+        if detected_domain_from_history:
+            conversation_context["detected_domain"] = detected_domain_from_history
+        
         if request.procedure:
             conversation_context["procedure"] = request.procedure
 
@@ -223,12 +246,30 @@ def chatbot(request: ChatRequest):
             except Exception as save_err:
                 print(f"Warning: Could not save chat messages: {save_err}")
         
-        # Get list of available procedures
-        procedures = list_all_procedures()
+        # Get list of available procedures (extended version with all domains)
+        procedures = list_all_extended_procedures()
+        
+        # Detect domain from question if not already detected by AI
+        detected_domain = ai_response.get("detected_domain")
+        if not detected_domain and request.question:
+            detected_domain = detect_domain_from_question(request.question)
+        
+        # If domain is detected, save it to conversation context for next message
+        if detected_domain and request.user_id:
+            try:
+                # Store detected domain in chat_messages metadata for context
+                supabase.table("chat_messages").insert({
+                    "user_id": request.user_id,
+                    "role": "system",
+                    "content": f"CONTEXT: Domain detected = {detected_domain}"
+                }).execute()
+            except Exception as domain_save_err:
+                print(f"Warning: Could not save domain context: {domain_save_err}")
         
         return ChatResponse(
             answer=ai_response.get("answer", ""),
             detected_procedure=ai_response.get("detected_procedure"),
+            detected_domain=detected_domain,
             needs_documents=ai_response.get("needs_documents", False),
             suggested_action=ai_response.get("suggested_action", ""),
             available_procedures=procedures
@@ -238,6 +279,7 @@ def chatbot(request: ChatRequest):
         return ChatResponse(
             answer=f"Ne cerem scuze, dar a apărut o eroare: {str(e)}",
             detected_procedure=None,
+            detected_domain=None,
             needs_documents=False,
             suggested_action="retry",
             available_procedures=[]

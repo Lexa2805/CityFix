@@ -5,6 +5,10 @@ export interface Message {
   content: string;
   timestamp?: Date;
   checklist?: string[];
+  detected_procedure?: string;
+  detected_domain?: string;
+  needs_documents?: boolean;
+  suggested_action?: string;
 }
 
 // Types pentru răspunsul chatbot-ului de la API
@@ -18,13 +22,17 @@ export interface ChatbotRequest {
   dossier_id?: string;
 }
 
-// Types pentru upload documente
 export interface UploadResponse {
   success: boolean;
   errors?: string[];
   error?: string;
   dossier_id?: string;
+  documents_processed?: any[]; // Rezultatele validării de la AI
+  missing_documents?: string[]; // Documente lipsă
+  procedure?: string; // Procedura detectată
+  summary?: string; // Sumarul text de la AI
 }
+
 
 export interface FileWithStatus {
   file: File;
