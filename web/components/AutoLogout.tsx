@@ -4,18 +4,25 @@ import { supabase } from '../lib/supabaseClient'
 
 export default function AutoLogout() {
   useEffect(() => {
-    // Funcție care se execută când utilizatorul închide tab-ul/fereastra
-    const handleBeforeUnload = async () => {
-      await supabase.auth.signOut()
+    // Detectează doar închiderea efectivă a tab-ului, nu refresh-ul
+    const handleVisibilityChange = async () => {
+      // Dacă tab-ul devine hidden și după 2 secunde e încă hidden, deconectează
+      if (document.visibilityState === 'hidden') {
+        setTimeout(async () => {
+          if (document.visibilityState === 'hidden') {
+            // Tab-ul este închis sau minimizat pentru mai mult de 2 secunde
+            // Nu facem nimic - păstrăm sesiunea activă
+          }
+        }, 2000)
+      }
     }
 
-    // Adaugă event listener pentru închiderea paginii
-    window.addEventListener('beforeunload', handleBeforeUnload)
+    // Comentat - nu mai deconectăm automat
+    // document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Cleanup: elimină event listener când componenta se demontează
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
+    // return () => {
+    //   document.removeEventListener('visibilitychange', handleVisibilityChange)
+    // }
   }, [])
 
   // Componenta nu renderează nimic vizibil

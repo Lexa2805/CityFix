@@ -21,30 +21,68 @@ export default function ChatPage() {
   const [pendingValidation, setPendingValidation] = useState<any[]>([]);
   const [detectedProcedure, setDetectedProcedure] = useState<string | null>(null);
   const [missingDocuments, setMissingDocuments] = useState<string[]>([]);
+  const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      // Allow access without authentication for demo purposes
-      setIsCheckingAuth(false);
+      try {
+        // Use getSession() instead of getUser() - more reliable on refresh
+        const { data: { session } } = await supabase.auth.getSession();
 
-      // Try to load messages if authenticated
-      if (session) {
-        setUserId(session.user.id);
-        try {
-          const loadedMessages = await ChatService.loadMessages();
-          setMessages(loadedMessages);
-        } catch (error) {
-          console.log('Could not load message history:', error);
-          // Continue without history - not critical
+        if (!isMounted) return;
+
+        // Always allow access (demo mode)
+        setIsCheckingAuth(false);
+
+        // If we have a session, load user data
+        if (session?.user?.id) {
+          setUserId(session.user.id);
+
+          // Load messages directly from database instead of using ChatService
+          try {
+            const { data: messagesData } = await supabase
+              .from('chat_messages')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: true })
+              .limit(50);
+
+            if (isMounted && messagesData) {
+              const formattedMessages: Message[] = messagesData.map((msg: any) => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                timestamp: new Date(msg.created_at),
+                checklist: msg.checklist || undefined,
+              }));
+              setMessages(formattedMessages);
+            }
+          } catch (error) {
+            console.log('Could not load message history:', error);
+            // Continue without history
+          }
+
+          // Load uploaded documents
+          if (isMounted) {
+            await loadUploadedDocuments(session.user.id);
+          }
         }
-
-        // Load uploaded documents
-        await loadUploadedDocuments(session.user.id);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
       }
     };
+
     checkAuth();
-  }, [router]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Poll for new uploaded documents every 5 seconds
   useEffect(() => {
@@ -288,20 +326,7 @@ export default function ChatPage() {
     setError(null);
 
     try {
-      // Salvează mesajul utilizatorului în Supabase (optional)
-      if (!silent) {
-        try {
-          await ChatService.saveMessage({
-            role: 'user',
-            content: messageText,
-          });
-        } catch (saveErr) {
-          console.error('Error saving message to Supabase:', saveErr);
-          // Continue anyway - saving is optional
-        }
-      }
-
-      // Apelează API-ul FastAPI chatbot
+      // Apelează API-ul FastAPI chatbot (care va salva mesajele în baza de date)
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
       // Prepare uploaded documents summary
@@ -344,6 +369,11 @@ export default function ChatPage() {
         setDetectedProcedure(data.detected_procedure);
       }
 
+      // Update detected domain if AI found one
+      if (data.detected_domain) {
+        setDetectedDomain(data.detected_domain);
+      }
+
       // Adaugă răspunsul AI (FastAPI returns "answer" not "response")
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -355,21 +385,13 @@ export default function ChatPage() {
           `📋 Procedură detectată: ${data.detected_procedure}`,
           ...(data.needs_documents ? ['📎 Este nevoie să încarci documente'] : [])
         ] : undefined,
+        detected_procedure: data.detected_procedure,
+        detected_domain: data.detected_domain,
+        needs_documents: data.needs_documents,
+        suggested_action: data.suggested_action,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      // Salvează răspunsul AI în Supabase (optional)
-      try {
-        await ChatService.saveMessage({
-          role: 'assistant',
-          content: assistantMessage.content,
-          checklist: assistantMessage.checklist,
-        });
-      } catch (saveErr) {
-        console.error('Error saving AI response to Supabase:', saveErr);
-        // Continue anyway - saving is optional
-      }
     } catch (err: any) {
       console.error("Error sending message:", err);
       const errorMsg = err.message || "A apărut o eroare la comunicarea cu asistentul";
@@ -403,10 +425,15 @@ export default function ChatPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-purple-700">
-                  ADU - Asistent Digital de Urbanism
+                  ADU - Asistent Digital Primăria Timișoara
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Întreabă-mă despre proceduri și documente necesare
+                  Întreabă-mă despre toate serviciile primăriei
+                  {detectedDomain && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      📁 {detectedDomain}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex gap-3">
