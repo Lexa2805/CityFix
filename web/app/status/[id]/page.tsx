@@ -21,12 +21,21 @@ type Request = {
   updated_at: string;
 };
 
+type Document = {
+  id: string;
+  file_name: string;
+  document_type_ai: string;
+  validation_status: string;
+  uploaded_at: string;
+};
+
 export default function CitizenStatusPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const [dossierStatus, setDossierStatus] = useState<DossierStatus | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +54,20 @@ export default function CitizenStatusPage() {
 
         if (dbError || !request) {
           throw new Error("Dosarul nu a fost găsit");
+        }
+
+        // Fetch documents for this request
+        const { data: docs, error: docsError } = await supabase
+          .from('documents')
+          .select('id, file_name, document_type_ai, validation_status, uploaded_at')
+          .eq('request_id', id)
+          .order('uploaded_at', { ascending: false });
+
+        console.log('Fetching documents for request_id:', id);
+        console.log('Documents response:', { docs, docsError });
+
+        if (!docsError && docs) {
+          setDocuments(docs);
         }
 
         // Mapează statusul din Supabase la structura DossierStatus
@@ -299,6 +322,59 @@ export default function CitizenStatusPage() {
               steps={dossierStatus.steps}
               currentStep={dossierStatus.current_step}
             />
+
+            {/* Documents Section */}
+            {documents.length > 0 && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Documente încărcate ({documents.length})
+                </h3>
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="flex-shrink-0">
+                          <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {doc.file_name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {doc.document_type_ai || 'Document'} • {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {doc.validation_status === 'approved' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Aprobat
+                          </span>
+                        )}
+                        {doc.validation_status === 'pending' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            ⏳ În așteptare
+                          </span>
+                        )}
+                        {doc.validation_status === 'rejected' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            ✗ Respins
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Help Card */}
