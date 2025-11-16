@@ -47,7 +47,7 @@ PROCEDURES = {
             ),
             DocumentRequirement(
                 doc_type="plan_cadastral",
-                is_required=True,
+                is_required=False,
                 description="Plan de încadrare în zonă sau plan cadastral actualizat"
             ),
         ]
@@ -69,17 +69,17 @@ PROCEDURES = {
             ),
             DocumentRequirement(
                 doc_type="act_proprietate",
-                is_required=True,
+                is_required=False,
                 description="Act de proprietate sau extras de carte funciară"
             ),
             DocumentRequirement(
                 doc_type="plan_cadastral",
-                is_required=True,
+                is_required=False,
                 description="Plan de situație vizat de OCPI"
             ),
             DocumentRequirement(
                 doc_type="proiect_tehnic",
-                is_required=True,
+                is_required=False,
                 description="Proiect tehnic întocmit de un arhitect autorizat"
             ),
         ]
@@ -101,12 +101,12 @@ PROCEDURES = {
             ),
             DocumentRequirement(
                 doc_type="plan_cadastral",
-                is_required=True,
+                is_required=False,
                 description="Plan cadastral cu evidențierea construcției de desființat"
             ),
             DocumentRequirement(
                 doc_type="raport_tehnic",
-                is_required=True,
+                is_required=False,
                 description="Raport tehnic de expertizare a construcției"
             ),
         ]

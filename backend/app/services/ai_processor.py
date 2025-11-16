@@ -53,7 +53,27 @@ def validate_id_card(file_bytes: bytes) -> dict:
         # Encodăm imaginea în base64
         base64_image = base64.b64encode(file_bytes).decode("utf-8")
 
-        prompt_text = f"""Privește această imagine. Este o carte de identitate românească? Dacă da, care este data expirării? Compară data expirării cu data curentă ({data_curenta}). Dacă documentul este valid, mesajul este 'Document valid'. Dacă documentul este expirat, mesajul trebuie să fie 'EROARE: Cartea de identitate a expirat la data [zi.lună.anul].'."""
+        prompt_text = f"""Privește această imagine. Este o carte de identitate românească? 
+
+Dacă da, identifică data expirării documentului (formatul: ZZ.LL.AAAA).
+
+Data curentă este: {data_curenta}
+
+IMPORTANT - Reguli pentru compararea datelor:
+- Compară ANII mai întâi: Dacă anul expirării > anul curent, documentul este VALID
+- Dacă anul expirării = anul curent, compară LUNILE
+- Dacă luna expirării > luna curentă, documentul este VALID
+- Dacă luna expirării = luna curentă, compară ZILELE
+- Documentul este valid dacă data expirării >= data curentă
+
+Exemple:
+- Expiră la 15.01.2029, astăzi este 16.11.2025 → VALID (2029 > 2025)
+- Expiră la 01.01.2025, astăzi este 16.11.2025 → EXPIRAT (2025 = 2025, dar 01 < 11)
+- Expiră la 15.11.2025, astăzi este 16.11.2025 → EXPIRAT (2025 = 2025, 11 = 11, dar 15 < 16)
+
+Răspunde cu:
+- "Document valid" dacă data expirării >= data curentă
+- "EROARE: Cartea de identitate a expirat la data [zi.lună.anul]" dacă data expirării < data curentă"""
 
         # Folosim formatul de mesaje OpenAI compatibil cu OpenRouter
         response = client.chat.completions.create(
@@ -62,7 +82,7 @@ def validate_id_card(file_bytes: bytes) -> dict:
             messages=[
                 {
                     "role": "system",
-                    "content": f"Ești un funcționar de la serviciul de urbanism. Data curentă este {data_curenta}. Răspunde doar în format JSON cu următoarea structură: {{\"is_valid\": boolean, \"message\": \"string\"}}.",
+                    "content": f"Ești un funcționar de la serviciul de urbanism. Data curentă este {data_curenta}. Când compari date, compară anul mai întâi, apoi luna, apoi ziua. Răspunde doar în format JSON cu următoarea structură: {{\"is_valid\": boolean, \"message\": \"string\"}}.",
                 },
                 {
                     "role": "user",

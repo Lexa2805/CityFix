@@ -128,7 +128,8 @@ def chatbot(request: ChatRequest):
         uploaded_docs_from_db = []
         if request.user_id:
             try:
-                docs_response = supabase.table("documents").select("*").eq("user_id", request.user_id).execute()
+                # Join with requests table to filter documents by user_id
+                docs_response = supabase.table("documents").select("*, requests!inner(user_id)").eq("requests.user_id", request.user_id).execute()
                 if docs_response.data:
                     uploaded_docs_from_db = [
                         {
